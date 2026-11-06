@@ -1,0 +1,21 @@
+{
+  "id": 1519,
+  "num_samples": 177600,
+  "path": "fleurs-ja-validation-0.wav",
+  "transcription": "多くの場合 海外のギャップイヤーコースに入学することで 帰国後に実際に大学に進学しやすくなります",
+  "raw_transcription": "多くの場合、海外のギャップイヤーコースに入学することで、帰国後に実際に大学に進学しやすくなります。",
+  "gender": 0,
+  "lang_id": 40,
+  "language": "Japanese",
+  "lang_group_id": 6,
+  "row_index": 0,
+  "subset": "ja_jp",
+  "split": "validation",
+  "audio_sha256": "9627b8f5d46806e1a433b443d692fdfb24f26a35c1a47eba26291475fc643d7b",
+  "audio_original_path": "10009621509886822059.wav",
+  "license": "CC-BY-4.0",
+  "source": "https://huggingface.co/datasets/google/fleurs",
+  "parquet_revision": "168de341b3db6859a9bac1c50a2ef5e3b47647e0",
+  "parquet_sha256": "4636065a2eb7d1bb07007d3193092eb1856cf101360831c61d6dfa611e579071",
+  "parquet_path": "ja_jp/validation/0000.parquet"
+}

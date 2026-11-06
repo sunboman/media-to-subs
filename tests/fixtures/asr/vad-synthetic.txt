@@ -1,0 +1,4 @@
+whisper_vad: detected 3 speech segments
+whisper_vad: vad_segment_info: orig_start: 2.00, orig_end: 4.00, vad_start: 0.00, vad_end: 2.00
+whisper_vad: vad_segment_info: orig_start: 10.00, orig_end: 12.00, vad_start: 2.20, vad_end: 4.20
+whisper_vad: vad_segment_info: orig_start: 13.00, orig_end: 15.00, vad_start: 4.40, vad_end: 6.40

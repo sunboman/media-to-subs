@@ -1,0 +1,12 @@
+# Start a compatible loopback server yourself; this profile does not launch one.
+[stt]
+mode = "local"
+model_path = "../models/ggml-small.bin"
+vad_model = "../models/ggml-silero-v6.2.0.bin"
+source_language = "ja"
+
+[llm]
+mode = "local"
+managed_server = false
+url = "http://127.0.0.1:8080/v1"
+model = "qwen2.5-1.5b-instruct"

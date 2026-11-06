@@ -1,0 +1,13 @@
+# Run from the repository root. No API credentials needed.
+[stt]
+mode = "local"
+model_path = "../models/ggml-small.bin"
+vad_model = "../models/ggml-silero-v6.2.0.bin"
+source_language = "ja"
+
+[llm]
+mode = "local"
+managed_server = true
+model = "qwen2.5-1.5b-instruct"
+model_path = "../models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+url = "http://127.0.0.1:8080/v1"

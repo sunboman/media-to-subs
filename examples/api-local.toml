@@ -1,0 +1,13 @@
+# STT key comes from its dedicated environment variable; never put a key here.
+[stt]
+mode = "api"
+url = "https://api.openai.com/v1"
+model = "whisper-1"
+source_language = "ja"
+
+[llm]
+mode = "local"
+managed_server = true
+model = "qwen2.5-1.5b-instruct"
+model_path = "../models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+url = "http://127.0.0.1:8080/v1"

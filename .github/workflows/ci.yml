@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.13"]
+    defaults:
+      run:
+        shell: bash
+    env:
+      UV_PYTHON: ${{ matrix.python }}
+      UV_PYTHON_DOWNLOADS: never
+      UV_NO_CONFIG: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      # Full upstream release commits; no mutable action tags.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: false
+      - name: Install FFmpeg and FFprobe (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ffmpeg
+      - name: Install FFmpeg and FFprobe (macOS)
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            brew install ffmpeg
+          fi
+      - name: Verify tools and install locked dependencies
+        run: |
+          python --version
+          uv --version
+          ffmpeg -version
+          ffprobe -version
+          uv sync --frozen
+      - name: Run documented unittest discovery
+        run: uv run --frozen python -m unittest discover -s tests -v
+      - name: Audit locked runtime dependencies
+        run: uv audit --frozen
+      - name: Build and check distributions
+        run: |
+          uv build
+          uv run --frozen python scripts/check_distribution.py --wheel dist/*.whl --sdist dist/*.tar.gz
+      - name: Install wheel and smoke test outside checkout
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+
+          wheels = list(Path("dist").resolve().glob("*.whl"))
+          assert len(wheels) == 1, "expected exactly one built wheel"
+          uv = shutil.which("uv")
+          assert uv, "uv must be installed"
+          with tempfile.TemporaryDirectory(prefix="media-to-subs-wheel-") as temporary:
+              root = Path(temporary)
+              env = {"PATH": os.environ["PATH"], "HOME": str(root / "home"),
+                     "XDG_CONFIG_HOME": str(root / "config"),
+                     "XDG_DATA_HOME": str(root / "data"),
+                     "XDG_CACHE_HOME": str(root / "cache"),
+                     "XDG_STATE_HOME": str(root / "state"),
+                     "UV_CACHE_DIR": str(root / "uv-cache"), "UV_NO_CONFIG": "1",
+                     "UV_PYTHON_DOWNLOADS": "never", "PYTHONNOUSERSITE": "1"}
+              Path(env["HOME"]).mkdir()
+
+              def run(*args):
+                  return subprocess.run(args, cwd=root, env=env, check=True,
+                                        text=True, capture_output=True, timeout=120)
+
+              python = str(root / "venv/bin/python")
+              cli = str(root / "venv/bin/media-to-subs")
+              run(uv, "venv", "--python", sys.executable, str(root / "venv"))
+              run(uv, "pip", "install", "--python", python, str(wheels[0]))
+              run(uv, "pip", "check", "--python", python)
+              version = run(python, "-I", "-c", "\n".join([
+                  "from importlib.metadata import version",
+                  "from pathlib import Path",
+                  "import sys, media_to_subs",
+                  "from media_to_subs import model_setup",
+                  "assert Path(media_to_subs.__file__).is_relative_to(Path(sys.prefix))",
+                  "assert model_setup.load_manifest(model_setup.DEFAULT_MANIFEST)",
+                  "assert media_to_subs.__version__ == version('media-to-subs')",
+                  "print(media_to_subs.__version__)",
+              ])).stdout.strip()
+              assert "usage:" in run(cli, "--help").stdout.lower()
+              assert run(cli, "--version").stdout.strip() == f"media-to-subs {version}"
+              assert "usage:" in run(python, "-I", "-m", "media_to_subs", "--help").stdout.lower()
+              print(f"Clean wheel install/help/version passed: media-to-subs {version}")
+          PY

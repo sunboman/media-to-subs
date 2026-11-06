@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "media-to-subs"
+version = "0.1.0"
+description = "Standalone timed transcription and Chinese subtitle tools"
+readme = "README.md"
+license = "MIT AND CC-BY-4.0"
+license-files = ["LICENSE", "LICENSES/CC-BY-4.0.txt", "examples/README.md"]
+requires-python = ">=3.11"
+dependencies = ["requests>=2.32,<3"]
+
+[project.scripts]
+media-to-subs = "media_to_subs.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/media_to_subs"]

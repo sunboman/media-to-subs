@@ -1,0 +1,16 @@
+# Allowlist the small independent package. Never send keys, media or weights.
+**
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!README.md
+!LICENSE
+!LICENSES/
+!LICENSES/**
+!examples/
+!examples/README.md
+!src/
+!src/**
+**/__pycache__/
+**/*.pyc
+**/.env*
