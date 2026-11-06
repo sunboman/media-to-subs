@@ -6,6 +6,15 @@ from pathlib import Path
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
+
+
+class LoopbackServer(ThreadingHTTPServer):
+    def server_bind(self):
+        # Synthetic readiness must not depend on external reverse DNS.
+        TCPServer.server_bind(self)
+        self.server_name = "localhost"
+        self.server_port = self.server_address[1]
 
 
 SRT = "7\n00:00:00,125 --> 00:00:01,500\nこんにちは、これは合成テストです\n\n19\n00:00:02,000 --> 00:00:03,875\nありがとうございます、また会いましょう\n"
@@ -83,7 +92,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def llama():
     event("llama-start")
-    server = ThreadingHTTPServer((argument("--host", default="127.0.0.1"),
+    server = LoopbackServer((argument("--host", default="127.0.0.1"),
                                   int(argument("--port"))), Handler)
     server.daemon_threads = True
     server.payloads = []

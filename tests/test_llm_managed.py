@@ -21,8 +21,17 @@ from test_llm_http import HTTPFixture, chat_response
 
 
 FAKE_SERVER = r'''
-import json, os, pathlib, subprocess, sys, time
+import json, os, pathlib, socket, subprocess, sys, time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import TCPServer
+
+class LoopbackServer(HTTPServer):
+    def server_bind(self):
+        # Synthetic readiness must not depend on external reverse DNS.
+        TCPServer.server_bind(self)
+        self.server_name = "localhost"
+        self.server_port = self.server_address[1]
+
 root = pathlib.Path(__file__).parent
 mode = MODE
 (root / "pid").write_text(str(os.getpid()))
@@ -32,6 +41,10 @@ if mode == "exit":
     sys.exit(7)
 if mode == "stall":
     time.sleep(30)
+if mode == "no-dns":
+    def reject_dns(*_):
+        raise AssertionError("loopback fixture must not resolve hostnames")
+    socket.getfqdn = reject_dns
 
 def option(name):
     return sys.argv[sys.argv.index(name) + 1]
@@ -64,7 +77,7 @@ class Handler(BaseHTTPRequestHandler):
         data = json.loads(body["messages"][1]["content"])
         content = json.dumps({"translations": [{"id": cue["id"], "text": "你好"} for cue in data["subtitles"]]})
         self.send(200, {"choices": [{"message": {"content": content}, "finish_reason": "stop"}]})
-HTTPServer((option("--host"), int(option("--port"))), Handler).serve_forever()
+LoopbackServer((option("--host"), int(option("--port"))), Handler).serve_forever()
 '''
 
 
@@ -107,6 +120,11 @@ class ManagedTests(unittest.TestCase):
         self.assertNotIn("synthetic-key", str(args))
         self.assertNotIn("synthetic-key", repr(result.provenance))
         self.assertEqual(json.loads((self.root / "post").read_text())["model"], args[args.index("--alias") + 1])
+        self.assert_child_gone()
+
+    def test_loopback_fixture_starts_without_hostname_resolution(self):
+        result = self.run_translation(self.config("no-dns"))
+        self.assertEqual(result.segments[0].text, "你好")
         self.assert_child_gone()
 
     def test_models_probe_transport_failure_retries_within_startup_deadline(self):
